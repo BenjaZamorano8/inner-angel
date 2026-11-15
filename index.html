@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#e1ebed">
 <title>Inner Angel</title>
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon-192.png">
+<link rel="icon" href="icon-angel-192.png">
 <link rel="preload" as="image" href="logo-header.jpg">
 <style>
   :root{
@@ -27,7 +27,10 @@
   .stats{position:absolute;top:max(10px,env(safe-area-inset-top));right:14px;font-size:12px;
     letter-spacing:.06em;color:var(--muted);text-align:right;line-height:1.5}
   .stats b{color:var(--ink);font-weight:600}
-  #rec{position:absolute;top:max(10px,env(safe-area-inset-top));left:14px;font-size:12px;font-weight:600;
+  #btnMenu{position:absolute;top:max(6px,env(safe-area-inset-top));left:8px;width:44px;height:44px;border:0;
+    background:none;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:5px;padding:0}
+  #btnMenu i{display:block;width:22px;height:2px;border-radius:2px;background:var(--ink);opacity:.7}
+  #rec{position:absolute;top:max(18px,env(safe-area-inset-top));left:58px;font-size:12px;font-weight:600;
     letter-spacing:.08em;color:#c26a75;display:none;align-items:center;gap:6px}
   #rec::before{content:"";width:8px;height:8px;border-radius:50%;background:#e0707d;animation:blink 1.2s infinite}
   @keyframes blink{50%{opacity:.25}}
@@ -57,6 +60,27 @@
   .notes button.ok{background:var(--ok);color:#fff}
   .notes button.bad{background:var(--bad);color:#fff}
   .notes button.ok small,.notes button.bad small{color:#fff}
+  .notes button{-webkit-touch-callout:none;position:relative}
+  .notes button.off{opacity:.28;pointer-events:none}
+  .notes button.black::after{content:"";position:absolute;right:7px;top:7px;width:4px;height:4px;border-radius:50%;background:var(--muted);opacity:.6}
+  #enh{position:fixed;display:none;z-index:6;padding:12px 18px;border-radius:14px;border:1px solid var(--line);
+    background:#fff;box-shadow:0 10px 30px rgba(60,80,90,.28);font-size:17px;font-weight:600;color:var(--ink);
+    transform:translate(-50%,-100%);white-space:nowrap}
+  #enh small{display:block;font-size:10px;letter-spacing:.1em;color:var(--muted);font-weight:500;text-transform:uppercase}
+
+  /* Ajustes */
+  .set h3{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:500;margin:18px 0 8px}
+  .range{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center}
+  .range select{width:100%;padding:12px;border-radius:12px;border:1px solid #d5e0e4;background:#fff;
+    font:inherit;font-size:16px;color:var(--ink)}
+  .range span{color:var(--muted);font-size:13px}
+  .chips{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+  .chips button{padding:10px 0;border-radius:12px;border:1px solid #d5e0e4;background:#fff;font-size:13px;font-weight:600;color:var(--muted)}
+  .chips button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .presets{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .presets button{flex:1;padding:9px 6px;border-radius:999px;border:1px solid #d5e0e4;background:#fff;font-size:12px;color:var(--ink)}
+  .set .note{font-size:12px;color:var(--muted);margin-top:10px;min-height:16px}
+  .set .note.warn{color:#c26a75}
 
   footer{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:12px;font-size:12px;color:var(--muted)}
   footer button{background:none;border:0;color:var(--muted);font-size:12px;letter-spacing:.06em;padding:6px 0}
@@ -83,6 +107,7 @@
 <body>
 <section class="hero">
   <img src="logo-header.jpg" alt="Inner Angel" width="900" height="503" decoding="async">
+  <button id="btnMenu" aria-label="Ajustes"><i></i><i></i><i></i></button>
   <div id="rec">REC <span id="recN">0</span>/20</div>
   <div class="stats">Aciertos <b id="sOk">0</b>/<b id="sTot">0</b><br>Racha <b id="sStreak">0</b></div>
 </section>
@@ -103,14 +128,25 @@
 </footer>
 
 <div id="sheet"><div class="panel" id="panel"></div></div>
+<div id="enh"></div>
 
 <script>
 // ================= Config =================
-const RANGE=[36,84];   // C2..C6: rango de la nota aleatoria
 const REC_N=20;
 const NAMES=["Do","Do♯","Re","Re♯","Mi","Fa","Fa♯","Sol","Sol♯","La","La♯","Si"];
+const FLATS=["Do","Re♭","Re","Mi♭","Mi","Fa","Sol♭","Sol","La♭","La","Si♭","Si"];
 const LETTERS=["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
+const LETTERS_F=["C","D♭","D","E♭","E","F","G♭","G","A♭","A","B♭","B"];
 const BLACK=new Set([1,3,6,8,10]);
+const MIDI_MIN=24, MIDI_MAX=96;   // C1..C7: límites del selector de rango
+
+const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}};
+const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+// Ajustes: rango de la nota aleatoria, notas activas y cuáles se escriben en bemol
+let settings=Object.assign({lo:36,hi:84,pcs:Array(12).fill(true),flat:Array(12).fill(false)},load("ia_settings",{}));
+const pcName=pc=>(settings.flat[pc]?FLATS:NAMES)[pc];
+const pcLetter=pc=>(settings.flat[pc]?LETTERS_F:LETTERS)[pc];
+const octName=m=>NAMES[m%12]+(Math.floor(m/12)-1);   // para el selector de rango
 // IV–V–I en Do: bajo en octavas + voces arriba
 const CADENCE=[
   {bass:[29,41], up:[60,65,69]},   // F1 F2 | C4 F4 A4
@@ -118,7 +154,7 @@ const CADENCE=[
   {bass:[36,48], up:[60,64,67]},   // C2 C3 | C4 E4 G4
 ];
 const STEP=0.38;      // segundos entre acordes (antes 0.75)
-const nameOf=m=>NAMES[m%12]+(Math.floor(m/12)-1);
+const nameOf=m=>pcName(m%12)+(Math.floor(m/12)-1);
 
 // ================= Audio =================
 // Cada nota se sintetiza UNA vez en un buffer (OfflineAudioContext) y luego solo se reproduce.
@@ -149,7 +185,7 @@ function synth(midi){
 (async()=>{
   const all=new Set();
   CADENCE.forEach(c=>[...c.bass,...c.up].forEach(m=>all.add(m)));
-  for(let m=RANGE[0];m<=RANGE[1];m++) all.add(m);
+  for(let m=settings.lo;m<=settings.hi;m++) all.add(m);
   for(const m of all){ await synth(m); await new Promise(r=>setTimeout(r,0)); }
 })();
 
@@ -187,8 +223,6 @@ function tap(el,fn){
 
 // ================= Estado =================
 const $=id=>document.getElementById(id);
-const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}};
-const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 let stats=load("ia_stats",{ok:0,tot:0,streak:0});
 let current=null, answered=true, firstTry=true;
 let recording=false, log=[];
@@ -200,22 +234,61 @@ tap($("btnCad"),playCadence);
 tap($("btnNote"),()=>{
   const c=audio();
   if(answered){
-    let m; do{ m=RANGE[0]+Math.floor(Math.random()*(RANGE[1]-RANGE[0]+1)); }while(m===current);
+    const pool=candidates();
+    if(!pool.length){ say("No hay notas activas en ese rango","bad"); return; }
+    let m; do{ m=pool[Math.floor(Math.random()*pool.length)]; }while(m===current && pool.length>1);
     current=m; answered=false; firstTry=true; clearMarks();
     $("noteHint").textContent="Repetir"; say("¿Qué nota es?");
   }
   play(current,c.currentTime,2.0,1);
 });
 
-const notesEl=$("notes");
-NAMES.forEach((n,pc)=>{
+function candidates(){
+  const out=[]; for(let m=settings.lo;m<=settings.hi;m++) if(settings.pcs[m%12]) out.push(m); return out;
+}
+
+// ---- Botones de notas ----
+// Teclas blancas: responden al apoyar el dedo.
+// Teclas negras: un toque corto = responder; mantener apretado (~0,45 s) = ofrecer el enarmónico (♯ ↔ ♭).
+const notesEl=$("notes"), noteBtns=[];
+const HOLD=450;
+for(let pc=0;pc<12;pc++){
   const b=document.createElement("button");
-  b.innerHTML=`${n}<small>${LETTERS[pc]}</small>`;
-  if(BLACK.has(pc)) b.classList.add("black");
-  tap(b,()=>guess(pc,b));
-  notesEl.appendChild(b);
-});
-function clearMarks(){ notesEl.querySelectorAll("button").forEach(b=>b.classList.remove("ok","bad")); }
+  if(BLACK.has(pc)){
+    b.classList.add("black");
+    let timer=null, held=false;
+    b.addEventListener("pointerdown",e=>{
+      e.preventDefault(); held=false; b.classList.add("down");
+      timer=setTimeout(()=>{ held=true; b.classList.remove("down"); showEnh(pc,b); },HOLD);
+    });
+    b.addEventListener("pointerup",()=>{ b.classList.remove("down"); clearTimeout(timer); if(!held) guess(pc,b); });
+    ["pointercancel","pointerleave"].forEach(ev=>b.addEventListener(ev,()=>{ b.classList.remove("down"); clearTimeout(timer); }));
+  }else{
+    tap(b,()=>guess(pc,b));
+  }
+  b.addEventListener("contextmenu",e=>e.preventDefault());
+  notesEl.appendChild(b); noteBtns.push(b);
+}
+function renderNotes(){
+  noteBtns.forEach((b,pc)=>{
+    b.innerHTML=`${pcName(pc)}<small>${pcLetter(pc)}</small>`;
+    b.classList.toggle("off",!settings.pcs[pc]);
+  });
+}
+function clearMarks(){ noteBtns.forEach(b=>b.classList.remove("ok","bad")); }
+
+// Burbuja "cambiar a bemol / sostenido"
+const enh=$("enh");
+function showEnh(pc,btn){
+  const r=btn.getBoundingClientRect();
+  const alt=settings.flat[pc]?NAMES[pc]:FLATS[pc];
+  enh.innerHTML=`<small>Cambiar a</small>${alt}`;
+  enh.style.left=(r.left+r.width/2)+"px"; enh.style.top=(r.top-8)+"px"; enh.style.display="block";
+  enh.onpointerup=e=>{ e.preventDefault(); settings.flat[pc]=!settings.flat[pc]; save("ia_settings",settings); renderNotes(); hideEnh(); };
+}
+function hideEnh(){ enh.style.display="none"; }
+document.addEventListener("pointerdown",e=>{ if(enh.style.display==="block" && !enh.contains(e.target)) hideEnh(); },true);
+renderNotes();
 
 function guess(pc,btn){
   if(current===null){ say("Primero toca una nota"); return; }
@@ -231,7 +304,7 @@ function guess(pc,btn){
     say(`${nameOf(current)} ✓`,"ok"); $("noteHint").textContent="Nota nueva";
   }else{
     btn.classList.add("bad"); firstTry=false;
-    say(`No es ${NAMES[pc]}`,"bad");
+    say(`No es ${pcName(pc)}`,"bad");
   }
   renderStats();
 }
@@ -252,14 +325,14 @@ tap($("btnLast"),()=>{ const e=load("ia_last",null); e?showLog(e):say("Aún no h
 function showLog(e){
   const ok=e.log.filter(x=>x.t%12===x.g).length;
   const conf={};
-  e.log.forEach(x=>{ if(x.t%12!==x.g){ const k=`${NAMES[x.t%12]} → ${NAMES[x.g]}`; conf[k]=(conf[k]||0)+1; } });
+  e.log.forEach(x=>{ if(x.t%12!==x.g){ const k=`${pcName(x.t%12)} → ${pcName(x.g)}`; conf[k]=(conf[k]||0)+1; } });
   const top=Object.entries(conf).sort((a,b)=>b[1]-a[1]).slice(0,4);
   const d=new Date(e.date);
   $("panel").innerHTML=`
     <h2>Registro</h2>
     <div class="sum">${ok}/${e.log.length} al primer intento · ${d.toLocaleDateString("es-CL")} ${d.toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"})}</div>
     <table><thead><tr><th>#</th><th>Era</th><th>Creíste</th><th class="r"></th></tr></thead><tbody>
-    ${e.log.map((x,i)=>{const r=x.t%12===x.g;return `<tr class="${r?"":"miss"}"><td>${i+1}</td><td>${nameOf(x.t)}</td><td>${r?"—":NAMES[x.g]}</td><td class="r">${r?"✓":"✗"}</td></tr>`}).join("")}
+    ${e.log.map((x,i)=>{const r=x.t%12===x.g;return `<tr class="${r?"":"miss"}"><td>${i+1}</td><td>${nameOf(x.t)}</td><td>${r?"—":pcName(x.g)}</td><td class="r">${r?"✓":"✗"}</td></tr>`}).join("")}
     </tbody></table>
     ${top.length?`<div class="conf"><b>Confusiones más comunes</b><br>${top.map(([k,v])=>`${k} (${v})`).join("<br>")}</div>`:""}
     <button class="close" id="closeSheet">Cerrar</button>`;
@@ -267,6 +340,53 @@ function showLog(e){
   $("closeSheet").onclick=()=>$("sheet").classList.remove("open");
 }
 $("sheet").addEventListener("click",e=>{ if(e.target.id==="sheet") $("sheet").classList.remove("open"); });
+
+// ================= Ajustes (☰) =================
+tap($("btnMenu"),showSettings);
+function showSettings(){
+  const opts=sel=>{ let h=""; for(let m=MIDI_MIN;m<=MIDI_MAX;m++) h+=`<option value="${m}" ${m===sel?"selected":""}>${octName(m)}</option>`; return h; };
+  $("panel").innerHTML=`
+    <div class="set">
+      <h2>Ajustes</h2>
+      <h3>Rango de la nota aleatoria</h3>
+      <div class="range"><select id="selLo">${opts(settings.lo)}</select><span>a</span><select id="selHi">${opts(settings.hi)}</select></div>
+      <h3>Notas que participan</h3>
+      <div class="chips" id="chips"></div>
+      <div class="presets">
+        <button data-p="all">Todas</button><button data-p="nat">Naturales</button>
+        <button data-p="acc">Alteradas</button><button data-p="none">Ninguna</button>
+      </div>
+      <div class="note" id="setNote"></div>
+      <button class="close" id="closeSheet">Listo</button>
+    </div>`;
+  const chips=$("chips");
+  for(let pc=0;pc<12;pc++){
+    const c=document.createElement("button"); c.textContent=pcName(pc);
+    c.onclick=()=>{ settings.pcs[pc]=!settings.pcs[pc]; applySettings(); };
+    chips.appendChild(c);
+  }
+  document.querySelectorAll(".presets button").forEach(b=>b.onclick=()=>{
+    const p=b.dataset.p;
+    settings.pcs=settings.pcs.map((_,pc)=>p==="all"||(p==="nat"&&!BLACK.has(pc))||(p==="acc"&&BLACK.has(pc)));
+    applySettings();
+  });
+  $("selLo").onchange=e=>{ settings.lo=+e.target.value; if(settings.hi<settings.lo){settings.hi=settings.lo;$("selHi").value=settings.hi;} applySettings(); };
+  $("selHi").onchange=e=>{ settings.hi=+e.target.value; if(settings.lo>settings.hi){settings.lo=settings.hi;$("selLo").value=settings.lo;} applySettings(); };
+  $("closeSheet").onclick=()=>$("sheet").classList.remove("open");
+  applySettings();
+  $("sheet").classList.add("open");
+}
+function applySettings(){
+  save("ia_settings",settings); renderNotes();
+  const chips=$("chips"); if(chips) [...chips.children].forEach((c,pc)=>c.classList.toggle("on",settings.pcs[pc]));
+  const n=candidates().length, note=$("setNote");
+  if(note){
+    note.className="note"+(n?"":" warn");
+    note.textContent=n?`${n} notas posibles entre ${octName(settings.lo)} y ${octName(settings.hi)}`:"Ninguna nota activa cae en ese rango";
+  }
+  // si la nota en juego quedó fuera de los ajustes, se descarta
+  if(current!==null && !answered && !candidates().includes(current)){ answered=true; current=null; clearMarks(); $("noteHint").textContent="Nota nueva"; say("Ajustes cambiados: toca una nota nueva"); }
+}
 
 tap($("btnReset"),()=>{ stats={ok:0,tot:0,streak:0}; renderStats(); say("Marcador reiniciado"); });
 renderStats();
