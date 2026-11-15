@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#14111f">
+<title>Inner Angel</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<style>
+  :root{
+    --bg:#14111f; --panel:#1f1a30; --ink:#f3eefc; --muted:#9a90b5;
+    --accent:#b89cff; --accent2:#ffd27a; --ok:#4fd18b; --bad:#ff6b7a;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  body{display:flex;flex-direction:column;padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom));gap:14px;user-select:none}
+  header{display:flex;justify-content:space-between;align-items:baseline}
+  h1{font-size:20px;margin:0;letter-spacing:.04em;font-weight:600}
+  h1 span{color:var(--accent)}
+  .stats{font-size:13px;color:var(--muted);text-align:right;line-height:1.4}
+  .stats b{color:var(--ink)}
+  .big{display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:1;min-height:180px}
+  .big button{border:0;border-radius:22px;font-size:20px;font-weight:600;color:#1a1530;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+    transition:transform .08s, filter .2s}
+  .big button:active{transform:scale(.97)}
+  .big small{font-size:13px;font-weight:500;opacity:.7}
+  #btnCad{background:var(--accent)}
+  #btnNote{background:var(--accent2)}
+  #msg{text-align:center;min-height:26px;font-size:17px;color:var(--muted);transition:color .2s}
+  #msg.ok{color:var(--ok)} #msg.bad{color:var(--bad)}
+  .notes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .notes button{height:62px;border-radius:14px;border:1px solid #2e2745;background:var(--panel);
+    color:var(--ink);font-size:18px;font-weight:600;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;line-height:1.1;transition:background .15s}
+  .notes button small{font-size:11px;color:var(--muted);font-weight:500}
+  .notes button.black{background:#0e0b17}
+  .notes button.ok{background:var(--ok);color:#06210f}
+  .notes button.bad{background:var(--bad);color:#2a0509}
+  .notes button.ok small,.notes button.bad small{color:inherit}
+  footer{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+  footer button{background:none;border:0;color:var(--muted);font-size:13px;padding:4px 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>Inner <span>Angel</span></h1>
+  <div class="stats">Aciertos <b id="sOk">0</b> / <b id="sTot">0</b> · Racha <b id="sStreak">0</b></div>
+</header>
+
+<section class="big">
+  <button id="btnCad">IV – V – I<small>Cadencia en Do</small></button>
+  <button id="btnNote">Nota<small id="noteHint">Tocar nota nueva</small></button>
+</section>
+
+<div id="msg">Toca la cadencia y después una nota</div>
+
+<section class="notes" id="notes"></section>
+
+<footer>
+  <button id="btnReset">Reiniciar marcador</button>
+  <span>v0.1</span>
+</footer>
+
+<script>
+// ===== Config =====
+const RANGE = [36, 84];          // C2..C6 (MIDI) – rango de la nota aleatoria
+const NAMES = ["Do","Do♯","Re","Re♯","Mi","Fa","Fa♯","Sol","Sol♯","La","La♯","Si"];
+const LETTERS = ["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
+const BLACK = new Set([1,3,6,8,10]);
+// Cadencia IV–V–I en Do mayor (bajo + voces), en MIDI
+const CADENCE = [
+  [41, 60, 65, 69],   // F2 | C4 F4 A4   (IV)
+  [43, 59, 62, 67],   // G2 | B3 D4 G4   (V)
+  [48, 60, 64, 67],   // C3 | C4 E4 G4   (I)
+];
+
+// ===== Audio: piano sintetizado (sin samples) =====
+let ctx, master;
+function audio(){
+  if(!ctx){
+    ctx = new (window.AudioContext||window.webkitAudioContext)();
+    master = ctx.createGain(); master.gain.value = 0.5;
+    const comp = ctx.createDynamicsCompressor();
+    master.connect(comp); comp.connect(ctx.destination);
+  }
+  if(ctx.state === "suspended") ctx.resume();
+  return ctx;
+}
+function playNote(midi, t, dur=1.6, vel=0.8){
+  const f = 440*Math.pow(2,(midi-69)/12);
+  const B = 0.0003;                         // leve inarmonicidad tipo cuerda
+  const amps = [1,.55,.32,.22,.14,.09,.06,.04];
+  const brightness = Math.max(0.35, 1 - (midi-40)/80);
+  amps.forEach((a,i)=>{
+    const n=i+1, fn=f*n*Math.sqrt(1+B*n*n);
+    if(fn>ctx.sampleRate/2.2) return;
+    const o=ctx.createOscillator(), g=ctx.createGain();
+    o.type="sine"; o.frequency.value=fn;
+    const peak = vel*a*(i? brightness:1)*0.18;
+    const d = dur/Math.sqrt(n);
+    g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(peak,t+0.006);
+    g.gain.exponentialRampToValueAtTime(peak*0.35,t+0.08);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+d);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t+d+0.05);
+  });
+}
+function playChord(notes,t,dur){ notes.forEach((m,i)=>playNote(m,t+i*0.008,dur,i?0.6:0.75)); }
+
+// ===== Estado =====
+let current=null, answered=true, firstTry=true;
+let stats = JSON.parse(localStorage.getItem("ia_stats")||'{"ok":0,"tot":0,"streak":0}');
+const $=id=>document.getElementById(id);
+function renderStats(){ $("sOk").textContent=stats.ok; $("sTot").textContent=stats.tot; $("sStreak").textContent=stats.streak;
+  try{localStorage.setItem("ia_stats",JSON.stringify(stats))}catch(e){} }
+function say(text,cls=""){ const m=$("msg"); m.textContent=text; m.className=cls; }
+
+// ===== Botones grandes =====
+$("btnCad").onclick=()=>{
+  const c=audio(), t=c.currentTime+0.05;
+  CADENCE.forEach((ch,i)=>playChord(ch,t+i*0.75,i===2?2.2:1.0));
+};
+$("btnNote").onclick=()=>{
+  const c=audio();
+  if(answered){
+    let m; do{ m=RANGE[0]+Math.floor(Math.random()*(RANGE[1]-RANGE[0]+1)); }while(current!==null && m===current);
+    current=m; answered=false; firstTry=true; clearMarks();
+    $("noteHint").textContent="Repetir nota"; say("¿Qué nota es?");
+  }
+  playNote(current,c.currentTime+0.03,2.0,0.9);
+};
+
+// ===== Las 12 notas =====
+const notesEl=$("notes");
+NAMES.forEach((n,pc)=>{
+  const b=document.createElement("button");
+  b.innerHTML=`${n}<small>${LETTERS[pc]}</small>`;
+  if(BLACK.has(pc)) b.classList.add("black");
+  b.onclick=()=>guess(pc,b);
+  notesEl.appendChild(b);
+});
+function clearMarks(){ notesEl.querySelectorAll("button").forEach(b=>b.classList.remove("ok","bad")); }
+function guess(pc,btn){
+  if(current===null){ say("Primero toca una nota"); return; }
+  if(answered){ // ya respondida: tocar la nota elegida como referencia
+    const c=audio(); playNote(48+pc+12,c.currentTime+0.02,1.2,0.7); return;
+  }
+  if(pc===current%12){
+    btn.classList.add("ok"); answered=true;
+    stats.tot++; if(firstTry){stats.ok++;stats.streak++;} else stats.streak=0;
+    say(`¡${NAMES[pc]}! ${firstTry?"Al primer intento":"Bien"}`,"ok");
+    $("noteHint").textContent="Tocar nota nueva";
+  }else{
+    btn.classList.add("bad"); firstTry=false;
+    say(`No es ${NAMES[pc]}, intenta de nuevo`,"bad");
+  }
+  renderStats();
+}
+$("btnReset").onclick=()=>{ stats={ok:0,tot:0,streak:0}; renderStats(); say("Marcador reiniciado"); };
+renderStats();
+
+// ===== Offline (PWA) =====
+if("serviceWorker" in navigator && location.protocol==="https:"){
+  navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
+</script>
+</body>
+</html>
