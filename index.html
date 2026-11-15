@@ -81,6 +81,17 @@
   .presets button{flex:1;padding:9px 6px;border-radius:999px;border:1px solid #d5e0e4;background:#fff;font-size:12px;color:var(--ink)}
   .set .note{font-size:12px;color:var(--muted);margin-top:10px;min-height:16px}
   .set .note.warn{color:#c26a75}
+  .hist{display:flex;flex-direction:column;gap:6px}
+  .hrow{display:grid;grid-template-columns:1fr 90px 44px;gap:10px;align-items:center;text-align:left;
+    padding:12px;border-radius:12px;border:1px solid #e3eaed;background:#fff;font-size:13px}
+  .hrow b{text-align:right;font-size:14px}
+  .bar{height:6px;border-radius:3px;background:#e3eaed;overflow:hidden}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,#9fd8bb,#7fcfa6);border-radius:3px}
+  .pushbtns{display:flex;gap:6px}
+  .pushbtns button{flex:1;padding:11px 8px;border-radius:12px;border:1px solid #d5e0e4;background:#fff;font-size:13px;font-weight:600}
+  #subBox{display:none;margin-top:8px}
+  #subBox textarea{width:100%;height:84px;border-radius:12px;border:1px solid #d5e0e4;padding:10px;font:11px ui-monospace,monospace;
+    color:var(--ink);background:#fff;resize:none}
 
   footer{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:12px;font-size:12px;color:var(--muted)}
   footer button{background:none;border:0;color:var(--muted);font-size:12px;letter-spacing:.06em;padding:6px 0}
@@ -124,7 +135,7 @@
 <footer>
   <button id="btnReset">Reiniciar</button>
   <button id="btnRec">● Registrar 20</button>
-  <button id="btnLast">Último registro</button>
+  <button id="btnLast">Historial</button>
 </footer>
 
 <div id="sheet"><div class="panel" id="panel"></div></div>
@@ -318,11 +329,37 @@ tap($("btnRec"),()=>{
 function finishRec(){
   recording=false; $("rec").style.display="none"; $("btnRec").textContent="● Registrar 20";
   const entry={date:new Date().toISOString(),log:[...log]};
-  save("ia_last",entry); setTimeout(()=>showLog(entry),700);
+  const hist=getHistory(); hist.unshift(entry); save("ia_history",hist.slice(0,HIST_N));
+  setTimeout(()=>showLog(entry),700);
 }
-tap($("btnLast"),()=>{ const e=load("ia_last",null); e?showLog(e):say("Aún no hay registros"); });
 
-function showLog(e){
+// ================= Historial (últimos 20 registros) =================
+const HIST_N=20;
+function getHistory(){
+  let h=load("ia_history",null);
+  if(!h){ const last=load("ia_last",null); h=last?[last]:[]; save("ia_history",h); }   // migra el registro de la v0.3
+  return h;
+}
+const scoreOf=e=>e.log.filter(x=>x.t%12===x.g).length;
+const fmtDate=d=>`${d.toLocaleDateString("es-CL",{day:"2-digit",month:"short"})} · ${d.toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"})}`;
+tap($("btnLast"),showHistory);
+function showHistory(){
+  const h=getHistory();
+  if(!h.length){ say("Aún no hay registros"); return; }
+  const avg=Math.round(h.reduce((s,e)=>s+scoreOf(e)/e.log.length,0)/h.length*100);
+  $("panel").innerHTML=`
+    <h2>Historial</h2>
+    <div class="sum">${h.length} registro${h.length>1?"s":""} · promedio ${avg}% al primer intento</div>
+    <div class="hist">${h.map((e,i)=>{const s=scoreOf(e),p=s/e.log.length;
+      return `<button class="hrow" data-i="${i}"><span>${fmtDate(new Date(e.date))}</span>
+        <span class="bar"><i style="width:${Math.round(p*100)}%"></i></span><b>${s}/${e.log.length}</b></button>`}).join("")}</div>
+    <button class="close" id="closeSheet">Cerrar</button>`;
+  $("panel").querySelectorAll(".hrow").forEach(b=>b.onclick=()=>showLog(h[+b.dataset.i],true));
+  $("sheet").classList.add("open");
+  $("closeSheet").onclick=()=>$("sheet").classList.remove("open");
+}
+
+function showLog(e,fromHistory){
   const ok=e.log.filter(x=>x.t%12===x.g).length;
   const conf={};
   e.log.forEach(x=>{ if(x.t%12!==x.g){ const k=`${pcName(x.t%12)} → ${pcName(x.g)}`; conf[k]=(conf[k]||0)+1; } });
@@ -335,9 +372,9 @@ function showLog(e){
     ${e.log.map((x,i)=>{const r=x.t%12===x.g;return `<tr class="${r?"":"miss"}"><td>${i+1}</td><td>${nameOf(x.t)}</td><td>${r?"—":pcName(x.g)}</td><td class="r">${r?"✓":"✗"}</td></tr>`}).join("")}
     </tbody></table>
     ${top.length?`<div class="conf"><b>Confusiones más comunes</b><br>${top.map(([k,v])=>`${k} (${v})`).join("<br>")}</div>`:""}
-    <button class="close" id="closeSheet">Cerrar</button>`;
-  $("sheet").classList.add("open");
-  $("closeSheet").onclick=()=>$("sheet").classList.remove("open");
+    <button class="close" id="closeSheet">${fromHistory?"← Historial":"Cerrar"}</button>`;
+  $("sheet").classList.add("open"); $("panel").scrollTop=0;
+  $("closeSheet").onclick=()=>fromHistory?showHistory():$("sheet").classList.remove("open");
 }
 $("sheet").addEventListener("click",e=>{ if(e.target.id==="sheet") $("sheet").classList.remove("open"); });
 
@@ -357,6 +394,11 @@ function showSettings(){
         <button data-p="acc">Alteradas</button><button data-p="none">Ninguna</button>
       </div>
       <div class="note" id="setNote"></div>
+      <h3>Recordatorios (mañana y noche)</h3>
+      <div class="pushbtns"><button id="btnPush">Activar notificaciones</button><button id="btnPushTest">Probar</button></div>
+      <div id="subBox"><textarea id="subTxt" readonly></textarea>
+        <div class="pushbtns" style="margin-top:6px"><button id="btnCopySub">Copiar código</button></div></div>
+      <div class="note" id="pushNote"></div>
       <button class="close" id="closeSheet">Listo</button>
     </div>`;
   const chips=$("chips");
@@ -373,6 +415,9 @@ function showSettings(){
   $("selLo").onchange=e=>{ settings.lo=+e.target.value; if(settings.hi<settings.lo){settings.hi=settings.lo;$("selHi").value=settings.hi;} applySettings(); };
   $("selHi").onchange=e=>{ settings.hi=+e.target.value; if(settings.lo>settings.hi){settings.lo=settings.hi;$("selLo").value=settings.lo;} applySettings(); };
   $("closeSheet").onclick=()=>$("sheet").classList.remove("open");
+  $("btnPush").onclick=enablePush;
+  $("btnPushTest").onclick=testPush;
+  $("btnCopySub").onclick=()=>navigator.clipboard.writeText($("subTxt").value).then(()=>pushNote("Copiado. Pégamelo en el chat.")).catch(()=>{ $("subTxt").select(); pushNote("Selecciona y copia el texto"); });
   applySettings();
   $("sheet").classList.add("open");
 }
@@ -390,6 +435,35 @@ function applySettings(){
 
 tap($("btnReset"),()=>{ stats={ok:0,tot:0,streak:0}; renderStats(); say("Marcador reiniciado"); });
 renderStats();
+
+// ================= Notificaciones push =================
+// Un workflow de GitHub Actions (.github/workflows/recordatorios.yml) envía el aviso a las 9:00 y 21:00.
+// Esta suscripción le dice a GitHub a qué celular mandarlo.
+const VAPID_PUBLIC="BOh92WsmsIIIGY9hJB_2u86RE-tCpjAXQifbksPmtVZbux_7dWUuGtIfE3PakkIlH-NGp9Ajzqt5FqdEXzAdSSk";
+const pushNote=(t,warn)=>{ const n=$("pushNote"); if(n){ n.textContent=t; n.className="note"+(warn?" warn":""); } };
+const b64ToBytes=s=>{ s=s.replace(/-/g,"+").replace(/_/g,"/"); s+="=".repeat((4-s.length%4)%4); return Uint8Array.from(atob(s),c=>c.charCodeAt(0)); };
+async function swReady(){
+  if(!("serviceWorker" in navigator) || location.protocol!=="https:") throw new Error("Abre la app instalada (desde github.io) para activar notificaciones");
+  return navigator.serviceWorker.ready;
+}
+async function enablePush(){
+  try{
+    const reg=await swReady();
+    const perm=await Notification.requestPermission();
+    if(perm!=="granted"){ pushNote("Permiso denegado: actívalo en Ajustes de Android → Apps → Inner Angel → Notificaciones",true); return; }
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToBytes(VAPID_PUBLIC)});
+    $("subTxt").value=JSON.stringify(sub); $("subBox").style.display="block";
+    pushNote("Listo en el celular. Copia el código y pásamelo para conectarlo con los recordatorios.");
+  }catch(e){ pushNote(e.message||String(e),true); }
+}
+async function testPush(){
+  try{
+    const reg=await swReady();
+    if(Notification.permission!=="granted" && await Notification.requestPermission()!=="granted"){ pushNote("Sin permiso de notificaciones",true); return; }
+    reg.showNotification("Inner Angel",{body:"Así se verán tus recordatorios 🎧",icon:"icon-angel-192.png",badge:"icon-angel-192.png"});
+  }catch(e){ pushNote(e.message||String(e),true); }
+}
 
 // Despierta el audio al primer toque en cualquier parte (evita el retraso inicial)
 document.addEventListener("pointerdown",()=>audio(),{once:true,capture:true});

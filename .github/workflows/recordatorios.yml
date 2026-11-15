@@ -1,0 +1,29 @@
+name: Recordatorios Inner Angel
+
+on:
+  schedule:
+    # GitHub usa hora UTC. Chile en verano (UTC-3): 12:00 UTC = 9:00 y 00:00 UTC = 21:00.
+    # En invierno (UTC-4) llegarían a las 8:00 y 20:00; si quieres, cambia a 13 y 1.
+    - cron: "0 12 * * *"
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+    inputs:
+      kind:
+        description: "Tipo de mensaje"
+        default: prueba
+        type: choice
+        options: [prueba, manana, noche]
+
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-save web-push@3
+      - run: node push/send.js
+        env:
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          KIND: ${{ inputs.kind }}
