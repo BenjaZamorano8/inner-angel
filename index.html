@@ -3,167 +3,277 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#14111f">
+<meta name="theme-color" content="#e1ebed">
 <title>Inner Angel</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
+<link rel="preload" as="image" href="logo-header.jpg">
 <style>
   :root{
-    --bg:#14111f; --panel:#1f1a30; --ink:#f3eefc; --muted:#9a90b5;
-    --accent:#b89cff; --accent2:#ffd27a; --ok:#4fd18b; --bad:#ff6b7a;
+    --bg:#e1ebed; --ink:#4f5f6b; --muted:#8a9aa5; --line:rgba(255,255,255,.9);
+    --card:linear-gradient(180deg,#ffffff 0%,#f3f7f8 100%);
+    --shadow:0 8px 24px rgba(80,110,125,.16), 0 1px 2px rgba(80,110,125,.12);
+    --ok:#7fcfa6; --bad:#f0a2ab; --gold:#d8bd7a;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
-    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-  body{display:flex;flex-direction:column;padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom));gap:14px;user-select:none}
-  header{display:flex;justify-content:space-between;align-items:baseline}
-  h1{font-size:20px;margin:0;letter-spacing:.04em;font-weight:600}
-  h1 span{color:var(--accent)}
-  .stats{font-size:13px;color:var(--muted);text-align:right;line-height:1.4}
-  .stats b{color:var(--ink)}
-  .big{display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:1;min-height:180px}
-  .big button{border:0;border-radius:22px;font-size:20px;font-weight:600;color:#1a1530;
+  html,body{margin:0;height:100%;color:var(--ink);
+    font-family:"Montserrat",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  body{background:var(--bg);display:flex;flex-direction:column;user-select:none;-webkit-user-select:none;
+    touch-action:manipulation;overflow:hidden;
+    padding:0 16px max(14px,env(safe-area-inset-bottom))}
+  .hero{margin:0 -16px;position:relative;flex:0 0 auto}
+  .hero img{display:block;width:100%;height:auto;
+    -webkit-mask-image:linear-gradient(#000 80%,transparent);mask-image:linear-gradient(#000 80%,transparent)}
+  .stats{position:absolute;top:max(10px,env(safe-area-inset-top));right:14px;font-size:12px;
+    letter-spacing:.06em;color:var(--muted);text-align:right;line-height:1.5}
+  .stats b{color:var(--ink);font-weight:600}
+  #rec{position:absolute;top:max(10px,env(safe-area-inset-top));left:14px;font-size:12px;font-weight:600;
+    letter-spacing:.08em;color:#c26a75;display:none;align-items:center;gap:6px}
+  #rec::before{content:"";width:8px;height:8px;border-radius:50%;background:#e0707d;animation:blink 1.2s infinite}
+  @keyframes blink{50%{opacity:.25}}
+
+  button{font-family:inherit;color:var(--ink);cursor:pointer}
+  .big{display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:1 1 auto;min-height:110px;max-height:300px;margin-top:-6px}
+  .big button{border:1px solid var(--line);border-radius:24px;background:var(--card);box-shadow:var(--shadow);
+    font-size:19px;font-weight:600;letter-spacing:.08em;
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
-    transition:transform .08s, filter .2s}
-  .big button:active{transform:scale(.97)}
-  .big small{font-size:13px;font-weight:500;opacity:.7}
-  #btnCad{background:var(--accent)}
-  #btnNote{background:var(--accent2)}
-  #msg{text-align:center;min-height:26px;font-size:17px;color:var(--muted);transition:color .2s}
-  #msg.ok{color:var(--ok)} #msg.bad{color:var(--bad)}
-  .notes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-  .notes button{height:62px;border-radius:14px;border:1px solid #2e2745;background:var(--panel);
-    color:var(--ink);font-size:18px;font-weight:600;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;line-height:1.1;transition:background .15s}
-  .notes button small{font-size:11px;color:var(--muted);font-weight:500}
-  .notes button.black{background:#0e0b17}
-  .notes button.ok{background:var(--ok);color:#06210f}
-  .notes button.bad{background:var(--bad);color:#2a0509}
-  .notes button.ok small,.notes button.bad small{color:inherit}
-  footer{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
-  footer button{background:none;border:0;color:var(--muted);font-size:13px;padding:4px 0}
+    transition:transform .06s, box-shadow .06s}
+  .big button small{font-size:11px;font-weight:500;letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+  .big button.down{transform:scale(.97);box-shadow:0 3px 10px rgba(80,110,125,.18)}
+  #btnNote{background:radial-gradient(circle at 50% 0%,#fffdf6 0%,#ffffff 45%,#f2f6f7 100%);
+    border-color:#f3e6c4}
+  #btnNote .dot{width:10px;height:10px;border-radius:50%;background:var(--gold);box-shadow:0 0 12px var(--gold)}
+
+  #msg{text-align:center;min-height:24px;margin:12px 0 10px;font-size:15px;letter-spacing:.04em;color:var(--muted)}
+  #msg.ok{color:#3f9a6d} #msg.bad{color:#c26a75}
+
+  .notes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;flex:0 0 auto}
+  .notes button{height:58px;border-radius:16px;border:1px solid var(--line);background:var(--card);
+    box-shadow:0 3px 10px rgba(80,110,125,.12);font-size:17px;font-weight:600;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1}
+  .notes button small{font-size:10px;color:var(--muted);font-weight:500;letter-spacing:.08em}
+  .notes button.black{background:linear-gradient(180deg,#d3dfe3,#c5d4d9);border-color:#e3ecef}
+  .notes button.down{transform:scale(.95)}
+  .notes button.ok{background:var(--ok);color:#fff}
+  .notes button.bad{background:var(--bad);color:#fff}
+  .notes button.ok small,.notes button.bad small{color:#fff}
+
+  footer{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:12px;font-size:12px;color:var(--muted)}
+  footer button{background:none;border:0;color:var(--muted);font-size:12px;letter-spacing:.06em;padding:6px 0}
+  #btnRec{border:1px solid var(--line);background:var(--card);box-shadow:var(--shadow);border-radius:999px;
+    padding:8px 14px;color:var(--ink);font-weight:600}
+
+  /* Hoja de registro */
+  #sheet{position:fixed;inset:0;background:rgba(60,80,90,.25);display:none;align-items:flex-end;z-index:5}
+  #sheet.open{display:flex}
+  .panel{width:100%;max-height:86%;overflow:auto;background:#f7fafb;border-radius:24px 24px 0 0;
+    padding:18px 18px max(18px,env(safe-area-inset-bottom));box-shadow:0 -10px 30px rgba(60,80,90,.2)}
+  .panel h2{margin:0 0 4px;font-size:16px;letter-spacing:.14em;text-transform:uppercase;font-weight:600}
+  .panel .sum{color:var(--muted);font-size:13px;margin-bottom:12px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:500;text-align:left;padding:6px 4px}
+  td{padding:8px 4px;border-top:1px solid #e3eaed}
+  tr.miss td{background:#fdf0f2}
+  td.r{text-align:right}
+  .conf{margin-top:12px;font-size:13px;color:var(--ink);line-height:1.6}
+  .panel .close{margin-top:14px;width:100%;padding:12px;border-radius:14px;border:1px solid var(--line);
+    background:var(--card);box-shadow:var(--shadow);font-weight:600;letter-spacing:.08em}
 </style>
 </head>
 <body>
-<header>
-  <h1>Inner <span>Angel</span></h1>
-  <div class="stats">Aciertos <b id="sOk">0</b> / <b id="sTot">0</b> · Racha <b id="sStreak">0</b></div>
-</header>
-
-<section class="big">
-  <button id="btnCad">IV – V – I<small>Cadencia en Do</small></button>
-  <button id="btnNote">Nota<small id="noteHint">Tocar nota nueva</small></button>
+<section class="hero">
+  <img src="logo-header.jpg" alt="Inner Angel" width="900" height="503" decoding="async">
+  <div id="rec">REC <span id="recN">0</span>/20</div>
+  <div class="stats">Aciertos <b id="sOk">0</b>/<b id="sTot">0</b><br>Racha <b id="sStreak">0</b></div>
 </section>
 
-<div id="msg">Toca la cadencia y después una nota</div>
+<section class="big">
+  <button id="btnCad">IV · V · I<small>Cadencia en Do</small></button>
+  <button id="btnNote"><span class="dot"></span>NOTA<small id="noteHint">Nota nueva</small></button>
+</section>
+
+<div id="msg">Cadencia, luego una nota</div>
 
 <section class="notes" id="notes"></section>
 
 <footer>
-  <button id="btnReset">Reiniciar marcador</button>
-  <span>v0.1</span>
+  <button id="btnReset">Reiniciar</button>
+  <button id="btnRec">● Registrar 20</button>
+  <button id="btnLast">Último registro</button>
 </footer>
 
-<script>
-// ===== Config =====
-const RANGE = [36, 84];          // C2..C6 (MIDI) – rango de la nota aleatoria
-const NAMES = ["Do","Do♯","Re","Re♯","Mi","Fa","Fa♯","Sol","Sol♯","La","La♯","Si"];
-const LETTERS = ["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
-const BLACK = new Set([1,3,6,8,10]);
-// Cadencia IV–V–I en Do mayor (bajo + voces), en MIDI
-const CADENCE = [
-  [41, 60, 65, 69],   // F2 | C4 F4 A4   (IV)
-  [43, 59, 62, 67],   // G2 | B3 D4 G4   (V)
-  [48, 60, 64, 67],   // C3 | C4 E4 G4   (I)
-];
+<div id="sheet"><div class="panel" id="panel"></div></div>
 
-// ===== Audio: piano sintetizado (sin samples) =====
-let ctx, master;
+<script>
+// ================= Config =================
+const RANGE=[36,84];   // C2..C6: rango de la nota aleatoria
+const REC_N=20;
+const NAMES=["Do","Do♯","Re","Re♯","Mi","Fa","Fa♯","Sol","Sol♯","La","La♯","Si"];
+const LETTERS=["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
+const BLACK=new Set([1,3,6,8,10]);
+// IV–V–I en Do: bajo en octavas + voces arriba
+const CADENCE=[
+  {bass:[29,41], up:[60,65,69]},   // F1 F2 | C4 F4 A4
+  {bass:[31,43], up:[59,62,67]},   // G1 G2 | B3 D4 G4
+  {bass:[36,48], up:[60,64,67]},   // C2 C3 | C4 E4 G4
+];
+const STEP=0.38;      // segundos entre acordes (antes 0.75)
+const nameOf=m=>NAMES[m%12]+(Math.floor(m/12)-1);
+
+// ================= Audio =================
+// Cada nota se sintetiza UNA vez en un buffer (OfflineAudioContext) y luego solo se reproduce.
+const SR=32000, LEN=2.6;
+const cache=new Map();
+function synth(midi){
+  if(cache.has(midi)) return cache.get(midi);
+  const p=(async()=>{
+    const off=new OfflineAudioContext(1,Math.ceil(SR*LEN),SR);
+    const f=440*Math.pow(2,(midi-69)/12), B=0.0003;
+    const amps=[1,.55,.32,.22,.14,.09,.06,.04];
+    const bright=Math.max(.35,1-(midi-40)/80);
+    const dur=midi<48?2.4:2.0;
+    amps.forEach((a,i)=>{
+      const n=i+1, fn=f*n*Math.sqrt(1+B*n*n); if(fn>SR/2.2) return;
+      const o=off.createOscillator(), g=off.createGain();
+      o.frequency.value=fn;
+      const peak=a*(i?bright:1)*0.3, d=dur/Math.sqrt(n);
+      g.gain.setValueAtTime(0,0); g.gain.linearRampToValueAtTime(peak,.005);
+      g.gain.exponentialRampToValueAtTime(peak*.35,.08); g.gain.exponentialRampToValueAtTime(.0001,d);
+      o.connect(g); g.connect(off.destination); o.start(0); o.stop(d);
+    });
+    return off.startRendering();
+  })();
+  cache.set(midi,p); return p;
+}
+// Pre-renderiza todo en segundo plano al abrir (no bloquea la interfaz)
+(async()=>{
+  const all=new Set();
+  CADENCE.forEach(c=>[...c.bass,...c.up].forEach(m=>all.add(m)));
+  for(let m=RANGE[0];m<=RANGE[1];m++) all.add(m);
+  for(const m of all){ await synth(m); await new Promise(r=>setTimeout(r,0)); }
+})();
+
+let ctx,master;
 function audio(){
   if(!ctx){
-    ctx = new (window.AudioContext||window.webkitAudioContext)();
-    master = ctx.createGain(); master.gain.value = 0.5;
-    const comp = ctx.createDynamicsCompressor();
-    master.connect(comp); comp.connect(ctx.destination);
+    ctx=new (window.AudioContext||window.webkitAudioContext)({latencyHint:"interactive"});
+    master=ctx.createGain(); master.gain.value=.7; master.connect(ctx.destination);
   }
-  if(ctx.state === "suspended") ctx.resume();
+  if(ctx.state==="suspended") ctx.resume();
   return ctx;
 }
-function playNote(midi, t, dur=1.6, vel=0.8){
-  const f = 440*Math.pow(2,(midi-69)/12);
-  const B = 0.0003;                         // leve inarmonicidad tipo cuerda
-  const amps = [1,.55,.32,.22,.14,.09,.06,.04];
-  const brightness = Math.max(0.35, 1 - (midi-40)/80);
-  amps.forEach((a,i)=>{
-    const n=i+1, fn=f*n*Math.sqrt(1+B*n*n);
-    if(fn>ctx.sampleRate/2.2) return;
-    const o=ctx.createOscillator(), g=ctx.createGain();
-    o.type="sine"; o.frequency.value=fn;
-    const peak = vel*a*(i? brightness:1)*0.18;
-    const d = dur/Math.sqrt(n);
-    g.gain.setValueAtTime(0,t);
-    g.gain.linearRampToValueAtTime(peak,t+0.006);
-    g.gain.exponentialRampToValueAtTime(peak*0.35,t+0.08);
-    g.gain.exponentialRampToValueAtTime(0.0001,t+d);
-    o.connect(g); g.connect(master);
-    o.start(t); o.stop(t+d+0.05);
+async function play(midi,when,len,vel){
+  const buf=await synth(midi), c=audio();
+  const t=Math.max(when,c.currentTime+.005);
+  const s=c.createBufferSource(), g=c.createGain();
+  s.buffer=buf; g.gain.setValueAtTime(vel,t); g.gain.setTargetAtTime(0,t+len,.06);
+  s.connect(g); g.connect(master); s.start(t); s.stop(t+len+.4);
+}
+function playCadence(){
+  const c=audio(), t0=c.currentTime+.03;
+  CADENCE.forEach((ch,i)=>{
+    const t=t0+i*STEP, len=i===2?1.6:STEP-.02;
+    ch.bass.forEach(m=>play(m,t,len,.95));
+    ch.up.forEach((m,k)=>play(m,t+k*.006,len,.5));
   });
 }
-function playChord(notes,t,dur){ notes.forEach((m,i)=>playNote(m,t+i*0.008,dur,i?0.6:0.75)); }
 
-// ===== Estado =====
-let current=null, answered=true, firstTry=true;
-let stats = JSON.parse(localStorage.getItem("ia_stats")||'{"ok":0,"tot":0,"streak":0}');
+// ================= Toques rápidos =================
+// pointerdown responde al instante (click espera a que levantes el dedo)
+function tap(el,fn){
+  el.addEventListener("pointerdown",e=>{e.preventDefault();el.classList.add("down");fn(e);});
+  ["pointerup","pointercancel","pointerleave"].forEach(ev=>el.addEventListener(ev,()=>el.classList.remove("down")));
+}
+
+// ================= Estado =================
 const $=id=>document.getElementById(id);
-function renderStats(){ $("sOk").textContent=stats.ok; $("sTot").textContent=stats.tot; $("sStreak").textContent=stats.streak;
-  try{localStorage.setItem("ia_stats",JSON.stringify(stats))}catch(e){} }
-function say(text,cls=""){ const m=$("msg"); m.textContent=text; m.className=cls; }
+const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}};
+const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+let stats=load("ia_stats",{ok:0,tot:0,streak:0});
+let current=null, answered=true, firstTry=true;
+let recording=false, log=[];
 
-// ===== Botones grandes =====
-$("btnCad").onclick=()=>{
-  const c=audio(), t=c.currentTime+0.05;
-  CADENCE.forEach((ch,i)=>playChord(ch,t+i*0.75,i===2?2.2:1.0));
-};
-$("btnNote").onclick=()=>{
+function renderStats(){ $("sOk").textContent=stats.ok; $("sTot").textContent=stats.tot; $("sStreak").textContent=stats.streak; save("ia_stats",stats); }
+function say(t,cls=""){ const m=$("msg"); m.textContent=t; m.className=cls; }
+
+tap($("btnCad"),playCadence);
+tap($("btnNote"),()=>{
   const c=audio();
   if(answered){
-    let m; do{ m=RANGE[0]+Math.floor(Math.random()*(RANGE[1]-RANGE[0]+1)); }while(current!==null && m===current);
+    let m; do{ m=RANGE[0]+Math.floor(Math.random()*(RANGE[1]-RANGE[0]+1)); }while(m===current);
     current=m; answered=false; firstTry=true; clearMarks();
-    $("noteHint").textContent="Repetir nota"; say("¿Qué nota es?");
+    $("noteHint").textContent="Repetir"; say("¿Qué nota es?");
   }
-  playNote(current,c.currentTime+0.03,2.0,0.9);
-};
+  play(current,c.currentTime,2.0,1);
+});
 
-// ===== Las 12 notas =====
 const notesEl=$("notes");
 NAMES.forEach((n,pc)=>{
   const b=document.createElement("button");
   b.innerHTML=`${n}<small>${LETTERS[pc]}</small>`;
   if(BLACK.has(pc)) b.classList.add("black");
-  b.onclick=()=>guess(pc,b);
+  tap(b,()=>guess(pc,b));
   notesEl.appendChild(b);
 });
 function clearMarks(){ notesEl.querySelectorAll("button").forEach(b=>b.classList.remove("ok","bad")); }
+
 function guess(pc,btn){
   if(current===null){ say("Primero toca una nota"); return; }
-  if(answered){ // ya respondida: tocar la nota elegida como referencia
-    const c=audio(); playNote(48+pc+12,c.currentTime+0.02,1.2,0.7); return;
+  if(answered){ play(60+pc,audio().currentTime,1.2,.8); return; }   // referencia
+  const right = pc===current%12;
+  if(firstTry && recording){
+    log.push({t:current,g:pc}); $("recN").textContent=log.length;
+    if(log.length>=REC_N) finishRec();
   }
-  if(pc===current%12){
+  if(right){
     btn.classList.add("ok"); answered=true;
     stats.tot++; if(firstTry){stats.ok++;stats.streak++;} else stats.streak=0;
-    say(`¡${NAMES[pc]}! ${firstTry?"Al primer intento":"Bien"}`,"ok");
-    $("noteHint").textContent="Tocar nota nueva";
+    say(`${nameOf(current)} ✓`,"ok"); $("noteHint").textContent="Nota nueva";
   }else{
     btn.classList.add("bad"); firstTry=false;
-    say(`No es ${NAMES[pc]}, intenta de nuevo`,"bad");
+    say(`No es ${NAMES[pc]}`,"bad");
   }
   renderStats();
 }
-$("btnReset").onclick=()=>{ stats={ok:0,tot:0,streak:0}; renderStats(); say("Marcador reiniciado"); };
+
+// ================= Registro de 20 intentos =================
+tap($("btnRec"),()=>{
+  if(recording){ recording=false; $("rec").style.display="none"; $("btnRec").textContent="● Registrar 20"; say("Registro cancelado"); return; }
+  recording=true; log=[]; $("recN").textContent=0; $("rec").style.display="flex";
+  $("btnRec").textContent="■ Cancelar"; say("Registrando tus próximos 20 intentos");
+});
+function finishRec(){
+  recording=false; $("rec").style.display="none"; $("btnRec").textContent="● Registrar 20";
+  const entry={date:new Date().toISOString(),log:[...log]};
+  save("ia_last",entry); setTimeout(()=>showLog(entry),700);
+}
+tap($("btnLast"),()=>{ const e=load("ia_last",null); e?showLog(e):say("Aún no hay registros"); });
+
+function showLog(e){
+  const ok=e.log.filter(x=>x.t%12===x.g).length;
+  const conf={};
+  e.log.forEach(x=>{ if(x.t%12!==x.g){ const k=`${NAMES[x.t%12]} → ${NAMES[x.g]}`; conf[k]=(conf[k]||0)+1; } });
+  const top=Object.entries(conf).sort((a,b)=>b[1]-a[1]).slice(0,4);
+  const d=new Date(e.date);
+  $("panel").innerHTML=`
+    <h2>Registro</h2>
+    <div class="sum">${ok}/${e.log.length} al primer intento · ${d.toLocaleDateString("es-CL")} ${d.toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"})}</div>
+    <table><thead><tr><th>#</th><th>Era</th><th>Creíste</th><th class="r"></th></tr></thead><tbody>
+    ${e.log.map((x,i)=>{const r=x.t%12===x.g;return `<tr class="${r?"":"miss"}"><td>${i+1}</td><td>${nameOf(x.t)}</td><td>${r?"—":NAMES[x.g]}</td><td class="r">${r?"✓":"✗"}</td></tr>`}).join("")}
+    </tbody></table>
+    ${top.length?`<div class="conf"><b>Confusiones más comunes</b><br>${top.map(([k,v])=>`${k} (${v})`).join("<br>")}</div>`:""}
+    <button class="close" id="closeSheet">Cerrar</button>`;
+  $("sheet").classList.add("open");
+  $("closeSheet").onclick=()=>$("sheet").classList.remove("open");
+}
+$("sheet").addEventListener("click",e=>{ if(e.target.id==="sheet") $("sheet").classList.remove("open"); });
+
+tap($("btnReset"),()=>{ stats={ok:0,tot:0,streak:0}; renderStats(); say("Marcador reiniciado"); });
 renderStats();
 
-// ===== Offline (PWA) =====
+// Despierta el audio al primer toque en cualquier parte (evita el retraso inicial)
+document.addEventListener("pointerdown",()=>audio(),{once:true,capture:true});
+
 if("serviceWorker" in navigator && location.protocol==="https:"){
   navigator.serviceWorker.register("sw.js").catch(()=>{});
 }

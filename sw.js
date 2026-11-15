@@ -1,6 +1,6 @@
 // Cambia la versión cada vez que actualices la app para refrescar la caché
-const CACHE = "inner-angel-v1";
-const FILES = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png"];
+const CACHE = "inner-angel-v2";
+const FILES = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "logo-header.jpg"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)));
